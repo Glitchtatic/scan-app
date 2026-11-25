@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="theme-color" content="#050505">
+<link rel="manifest" href='data:application/manifest+json,{"name":"ScanApp","short_name":"Scan","start_url":"./index.html","display":"standalone","background_color":"%23050505","theme_color":"%23050505"}'>
+<title>ScanApp</title>
+<style>
+  html,body{margin:0;height:100%;background:#050505;overflow:hidden;-webkit-user-select:none;user-select:none}
+  canvas{position:fixed;left:0;top:0;display:block}
+  #ui{position:fixed;left:0;right:0;bottom:calc(env(safe-area-inset-bottom,0px)+16px);text-align:center;color:#0f0;font:600 18px system-ui,sans-serif;transition:opacity .4s;text-shadow:0 0 6px #0f0;padding:0 12px}
+  #ui.hidden{opacity:0;pointer-events:none}
+  #ui p{margin:0 0 10px;letter-spacing:.05em;text-transform:lowercase}
+  #code{font-size:20px;width:min(70vw,240px);text-align:center;letter-spacing:.2em;padding:10px;background:rgba(0,0,0,.6);color:#0f0;border:1px solid #0f0;border-radius:6px;outline:none;font-family:ui-monospace,Menlo,monospace}
+  #go{font-size:16px;margin-left:8px;padding:10px 14px;background:#000;color:#0f0;border:1px solid #0f0;border-radius:6px}
+  #err{height:20px;margin-top:8px;color:#f00;font-size:14px}
+  .shake{animation:sh .35s}
+  @keyframes sh{0%,100%{transform:translateX(0)}25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="ui">
+  <p>введите код активации</p>
+  <input id="code" placeholder="код">
+  <button id="go">OK</button>
+  <div id="err"></div>
+</div>
+<script>
+  const PASS = '777'; // ← тут меняешь пароль на свой
+  let open = false, scanPhase = 0;
+  const c = document.getElementById('c'), g = c.getContext('2d'), ui = document.getElementById('ui'), err = document.getElementById('err');
+  let W = 0, H = 0;
+  const D = Math.min(devicePixelRatio || 1, 2);
+
+  function rs(){ W = innerWidth; H = innerHeight; c.width = W*D; c.height = H*D; c.style.width = W+'px'; c.style.height = H+'px'; }
+  addEventListener('resize', rs); rs();
+
+  function tryOpen(){
+    const code = document.getElementById('code').value.trim().toLowerCase();
+    if (code === PASS.toLowerCase()) { open = true; ui.classList.add('hidden'); scanPhase = 0; }
+    else { err.textContent = 'Ошибка доступа'; ui.classList.add('shake'); setTimeout(()=>ui.classList.remove('shake'),350); }
+  }
+  document.getElementById('go').addEventListener('click', tryOpen);
+  document.getElementById('code').addEventListener('keydown', e => { if (e.key === 'Enter') tryOpen(); });
+
+  function drawGrid(){
+    g.strokeStyle = 'rgba(0,255,0,.15)'; g.lineWidth = 1; const step = 40;
+    for (let x = 0; x <= W; x += step){ g.beginPath(); g.moveTo(x,0); g.lineTo(x,H); g.stroke(); }
+    for (let y = 0; y <= H; y += step){ g.beginPath(); g.moveTo(0,y); g.lineTo(W,y); g.stroke(); }
+  }
+  function drawLine(){
+    const y = scanPhase % H;
+    g.strokeStyle = '#0f0'; g.lineWidth = 2; g.setLineDash([10,10]);
+    g.beginPath(); g.moveTo(0,y); g.lineTo(W,y); g.stroke(); g.setLineDash([]);
+  }
+  function loop(){
+    requestAnimationFrame(loop);
+    g.clearRect(0,0,W,H);
+    if (!open){ g.fillStyle = 'rgba(15,255,15,.03)'; g.fillRect(0,0,W,H); return; }
+    drawGrid(); drawLine();
+    scanPhase += 2;
+  }
+  loop();
+</script>
+</body>
+</html>
